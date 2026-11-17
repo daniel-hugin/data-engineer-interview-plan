@@ -1,0 +1,12 @@
+# Copia a dbt/.envrc y rellena. NUNCA subas .envrc al repo (ya está en .gitignore).
+# Requiere direnv instalado (apt install direnv, brew install direnv…) y, la primera vez,
+# ejecutar `direnv allow` dentro de dbt/ para autorizar que cargue estas variables.
+
+export DBT_PROFILES_DIR=.
+export SNOWFLAKE_ACCOUNT=<org>-<cuenta>
+export SNOWFLAKE_USER=<tu_usuario>
+export SNOWFLAKE_PRIVATE_KEY_PATH=../keys/rsa_key_personal.p8
+
+# Descomenta solo si tu clave personal tiene passphrase
+# (comprueba con: openssl pkcs8 -in <clave>.p8 -passin pass: -out /dev/null 2>/dev/null && echo "sin cifrar" || echo "cifrada"):
+# export SNOWFLAKE_PRIVATE_KEY_PASSPHRASE=<tu-passphrase>

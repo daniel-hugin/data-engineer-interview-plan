@@ -1,0 +1,3 @@
+# Providers de Airflow. Se instalan con el fichero de constraints oficial de la
+# versión de Airflow (ver Dockerfile), que es quien fija la versión exacta.
+apache-airflow-providers-snowflake

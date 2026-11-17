@@ -1,0 +1,38 @@
+name: travel_dwh
+version: "1.0.0"
+profile: travel_dwh
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# En Airflow apuntamos esto a /tmp para no escribir en el checkout montado
+packages-install-path: "{{ env_var('DBT_PACKAGES_INSTALL_PATH', 'dbt_packages') }}"
+
+clean-targets:
+  - target
+  - dbt_packages
+
+vars:
+  # Primera fecha de la que necesitamos tipo de cambio.
+  # Las reservas de 2015 tienen lead times de hasta ~2 años.
+  fx_start_date: "2013-01-01"
+  reporting_currency: "GBP"
+
+models:
+  travel_dwh:
+    +query_tag: travel_dwh
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+      +transient: false   # producción: conservar Fail-safe
+      +copy_grants: true

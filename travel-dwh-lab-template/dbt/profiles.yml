@@ -1,0 +1,45 @@
+# Sin secretos: todo llega por variables de entorno.
+# El rol y la base de datos van fijados por target a propósito:
+# el usuario de CI no tiene el rol TRANSFORMER, así que no puede construir en producción
+# aunque alguien ejecute `--target prod` por error.
+travel_dwh:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PASSPHRASE', '') }}"
+      role: developer
+      warehouse: dev_wh
+      database: analytics_dev
+      schema: "{{ env_var('DBT_SCHEMA', 'dbt_dev') }}"
+      threads: 4
+      query_tag: travel_dwh_dev
+
+    ci:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PASSPHRASE', '') }}"
+      role: developer
+      warehouse: dev_wh
+      database: analytics_dev
+      schema: "{{ env_var('DBT_SCHEMA') }}"   # ci_pr_<número de PR>
+      threads: 4
+      query_tag: travel_dwh_ci
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PASSPHRASE', '') }}"
+      role: transformer
+      warehouse: transforming_wh
+      database: analytics
+      schema: prod   # no se usa en marts: generate_schema_name usa staging/intermediate/marts tal cual
+      threads: 4
+      query_tag: travel_dwh_prod

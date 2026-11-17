@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: ecb
+    description: Tipos de cambio de referencia del BCE, cargados a diario por Airflow (DAG ecb_exchange_rates).
+    database: raw
+    schema: ecb
+    config:
+      loaded_at_field: loaded_at
+      freshness:
+        # el BCE no publica fines de semana ni festivos TARGET
+        warn_after: {count: 3, period: day}
+        error_after: {count: 5, period: day}
+    tables:
+      - name: exchange_rates
+        description: Unidades de `currency` por 1 EUR. Una fila por fecha hábil y divisa.

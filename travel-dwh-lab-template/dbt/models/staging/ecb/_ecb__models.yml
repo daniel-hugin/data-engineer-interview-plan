@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_ecb__exchange_rates
+    description: Tipos de cambio EUR -> divisa, solo días hábiles del BCE.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ["rate_date", "quote_currency"]
+    columns:
+      - name: rate
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false

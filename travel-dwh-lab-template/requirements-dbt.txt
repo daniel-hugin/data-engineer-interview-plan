@@ -1,0 +1,4 @@
+# Versiones fijadas: las mismas en local, en CI y en la imagen de Airflow.
+dbt-core==1.12.5
+dbt-snowflake==1.12.1
+sqlfluff==4.4.0

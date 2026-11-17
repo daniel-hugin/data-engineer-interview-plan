@@ -1,0 +1,27 @@
+# Secretos: nunca al repo (aplica a cualquier carpeta keys/ y .env)
+**/keys/*
+!**/keys/.gitkeep
+*.p8
+*.pem
+.env
+.env.*
+!.env.example
+
+# Ajustes personales de Claude Code
+.claude/settings.local.json
+
+# Laboratorio: entornos, datos y artefactos
+travel-dwh-lab-template/.venv/
+travel-dwh-lab-template/data/
+travel-dwh-lab-template/dbt/target/
+travel-dwh-lab-template/dbt/dbt_packages/
+travel-dwh-lab-template/dbt/logs/
+travel-dwh-lab-template/airflow/logs/
+__pycache__/
+
+# Obsidian (configuración personal del vault)
+.obsidian/
+
+# Ficheros personales del usuario (se crean desde las plantillas .example.md)
+perfil.md
+progreso.md

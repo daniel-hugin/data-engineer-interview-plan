@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: fct_bookings
+    description: >
+      Una fila por reserva, con ingreso en EUR y en la divisa de reporting
+      (var reporting_currency) usando el tipo del día de la reserva.
+    config:
+      contract:
+        enforced: false   # ejercicio día 5: activarlo y declarar data_type en cada columna
+    columns:
+      - name: booking_id
+        data_tests:
+          - unique
+          - not_null
+      - name: fx_rate_eur_to_reporting
+        description: >
+          Si falla, falta histórico del BCE: lanza el DAG ecb_exchange_rates con
+          start_period = fx_start_date.
+        data_tests:
+          - not_null
+      - name: revenue_eur
+        data_tests:
+          - not_null

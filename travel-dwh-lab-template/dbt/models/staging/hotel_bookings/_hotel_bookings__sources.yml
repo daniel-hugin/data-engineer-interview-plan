@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: hotel_bookings
+    description: >
+      Dataset público Hotel Booking Demand (Antonio, Almeida y Nunes, 2019).
+      Reservas de dos hoteles de Portugal, 2015-2017. Carga única vía stage + COPY INTO.
+    database: raw
+    schema: hotel_bookings
+    tables:
+      - name: bookings
+        description: Una fila por reserva, todas las columnas como VARCHAR.

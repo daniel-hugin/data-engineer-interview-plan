@@ -1,0 +1,116 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "travel-dwh-lab-template/dbt/**"
+      - "travel-dwh-lab-template/requirements-dbt.txt"
+      - "travel-dwh-lab-template/.sqlfluff"
+      - ".github/workflows/dbt-ci.yml"
+
+permissions:
+  contents: read
+
+# Un push nuevo al mismo PR cancela la ejecución anterior: menos créditos de Snowflake
+concurrency:
+  group: dbt-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    # Sin secretos ni conexión: falla rápido y barato antes de tocar Snowflake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: travel-dwh-lab-template/requirements-dbt.txt
+
+      - run: pip install -r travel-dwh-lab-template/requirements-dbt.txt
+
+      # Desde la carpeta del lab, para que SQLFluff encuentre su .sqlfluff
+      - name: SQLFluff
+        working-directory: travel-dwh-lab-template
+        run: sqlfluff lint dbt/models
+
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    environment: ci
+    env:
+      DBT_TARGET: ci
+      DBT_SCHEMA: ci_pr_${{ github.event.pull_request.number }}
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_CI_USER }}
+    steps:
+      - name: Checkout del PR
+        uses: actions/checkout@v4
+        with:
+          path: pr
+
+      - name: Checkout de main (estado de producción)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pr/travel-dwh-lab-template/requirements-dbt.txt
+
+      - run: pip install -r pr/travel-dwh-lab-template/requirements-dbt.txt
+
+      - name: Clave privada de Snowflake
+        env:
+          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY }}
+        run: |
+          key_path="$RUNNER_TEMP/snowflake_ci.p8"
+          printf '%s\n' "$SNOWFLAKE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          echo "SNOWFLAKE_PRIVATE_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      # Producción = main (Airflow despliega main por pull), así que el manifest de
+      # producción se obtiene parseando main. `dbt parse` no conecta a Snowflake.
+      - name: Manifest de producción
+        working-directory: main/travel-dwh-lab-template/dbt
+        env:
+          DBT_PROFILES_DIR: .
+        run: |
+          if [ -f dbt_project.yml ]; then
+            dbt deps --quiet
+            dbt parse --target prod --target-path "$RUNNER_TEMP/prod-state"
+            echo "HAS_PROD_STATE=true" >> "$GITHUB_ENV"
+          else
+            echo "main aún no tiene proyecto dbt: build completo"
+          fi
+
+      # Slim CI: solo lo modificado y sus dependientes; lo demás se lee de producción (--defer)
+      - name: dbt build
+        working-directory: pr/travel-dwh-lab-template/dbt
+        env:
+          DBT_PROFILES_DIR: .
+        run: |
+          dbt deps --quiet
+          if [ "${HAS_PROD_STATE:-false}" = "true" ]; then
+            dbt build --select state:modified+ --defer --state "$RUNNER_TEMP/prod-state"
+          else
+            dbt build
+          fi
+
+      - name: Limpiar esquemas del PR
+        if: always()
+        working-directory: pr/travel-dwh-lab-template/dbt
+        env:
+          DBT_PROFILES_DIR: .
+        # Bloque `|`: en una línea simple, el ": " de --args rompe el YAML
+        run: |
+          dbt run-operation drop_schemas_by_prefix --args "{prefix: ${DBT_SCHEMA}}"
